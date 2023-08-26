@@ -4,7 +4,12 @@ using UnityEngine;
 
 public class Spawner : MonoBehaviour
 {
-    [Space, Header("Spawn System")]
+    public static Spawner instance;
+    [Header("Enemy Target"), Tooltip("Spawned Enemies will go to there")]
+    public Transform enemyTarget;
+    [SerializeField, Header("Enemy Storage"), Tooltip("GameObject that should store Instantiated enemies to be clean")]
+    GameObject enemyStorage;
+    [Space(30), Header("Spawn System")]
     // for now the game have only one enemy variation
     [SerializeField, Header("Enemy to Spawn"), Tooltip("Add Enemy Prefab that it will spawn on spawn points")] 
     private GameObject enemyPrefab;
@@ -16,7 +21,7 @@ public class Spawner : MonoBehaviour
     private float[] spawnDelay;
     [SerializeField, Header("Start Spawn Delay"), Tooltip("Add Delay before starting to spawn enemies, should be in order of other arrays")]
     private float[] spawnStartDelay;
-    [Space, Header("Wave System")]
+    [Space(30), Header("Wave System")]
     [SerializeField, Header("Wave System"), Tooltip("Check it true to make wave system activate and it will automatically turn existing to wave system")]
     private bool waveSystem;
     [Header("Number of Waves"), Tooltip("How many waves should the level have, this will divide number of enemies into waves")]
@@ -26,11 +31,15 @@ public class Spawner : MonoBehaviour
     [SerializeField, Header("Delay of Waves"), Tooltip("Add Delay in-between next wave, must be same order and length of Number of waves")]
     private float[] wavesDelay;
     // Private variables for storing wave stuff
+    [HideInInspector] public bool waveRunning;
+    [HideInInspector] public int totalEnemies;
     private int[] wavesNumberDivided;
     private int[] wavesEnemyPointsDivided;
 
     private void Awake()
     {
+        instance = this;
+
         if (wavesDelay.Length != waves)
         {
             Debug.LogWarning("Delay of Waves is not equal to Number of Waves, please make sure is it equal to Number of Waves");
@@ -63,39 +72,87 @@ public class Spawner : MonoBehaviour
                 for (int e = 0; e < waves; e++)
                 {
                     wavesNumberDivided[e] = wavesNumberDivided[e] + numRound;
+                    totalEnemies += numRound;
                 }
             }
-            StartCoroutine(spawner(spawnStartDelay[0], waves, true));
+            StartSpawn();
         }
         else
+        {
+            for(int i = 0; i < spawnNumber.Length; i++)
+            {
+                totalEnemies += spawnNumber[i];
+            }
+            StartSpawn();
+        }
+    }
+    public void StartSpawn()
+    {
+        if (waveSystem && waves >= currentWave)
+        {
+            StartCoroutine(waveSpawner(currentWave));
+        }
+        else if(waves < currentWave)
+        {
+            Debug.Log("Waves ended");
+            // When all waves finished
+        }
+        else if(!waveSystem)
         {
             for (int num = 0; num < spawnPoints.Length; num++)
             {
-                StartCoroutine(spawner(spawnStartDelay[num], num, false));
+                StartCoroutine(normalSpawner(spawnStartDelay[num], num));
             }
         }
     }
-    private IEnumerator spawner(float startDelay, int i, bool _waves)
+    private IEnumerator normalSpawner(float startDelay, int i)
     {
-        if(_waves && i >= currentWave)
+        yield return new WaitForSeconds(startDelay);
+        for (int num = 0; num < spawnNumber[i]; num++)
         {
-            yield return new WaitForSeconds(wavesDelay[currentWave]);
-            currentWave++;
-
-            for (int num = 0; num < spawnNumber[i]; num++)
+            if(enemyStorage != null)
             {
-                Instantiate(enemyPrefab, spawnPoints[i], false);
-                yield return new WaitForSeconds(spawnDelay[i]);
+                Instantiate(enemyPrefab, spawnPoints[i].position, Quaternion.identity, enemyStorage.transform);
+            }
+            else
+            {
+                Instantiate(enemyPrefab, spawnPoints[i].position, Quaternion.identity, spawnPoints[i]);
+            }
+            yield return new WaitForSeconds(spawnDelay[i]);
+        }
+    }
+    private IEnumerator waveSpawner(int i)
+    {
+        waveRunning = true;
+
+        yield return new WaitForSeconds(wavesDelay[i]);
+
+        for (int num = 0; num < wavesEnemyPointsDivided.Length; num++)
+        {
+            for (int e = 0; e < wavesEnemyPointsDivided[e]; e++)
+            {
+                if (enemyStorage != null)
+                {
+                    Instantiate(enemyPrefab, spawnPoints[num].position, Quaternion.identity, enemyStorage.transform);
+                }
+                else
+                {
+                    Instantiate(enemyPrefab, spawnPoints[num].position, Quaternion.identity, spawnPoints[num]);
+                }
+                yield return new WaitForSeconds(spawnDelay[num]);
             }
         }
-        else
+
+        currentWave++;
+        waveRunning = false;
+    }
+
+    public void EnemyDied()
+    {
+        totalEnemies--;
+        if(totalEnemies <= 0)
         {
-            yield return new WaitForSeconds(startDelay);
-            for (int num = 0; num < spawnNumber[i]; num++)
-            {
-                Instantiate(enemyPrefab, spawnPoints[i], false);
-                yield return new WaitForSeconds(spawnDelay[i]);
-            }
+            PlayerController.instance.PlayerDieWin(true);
         }
     }
 }
