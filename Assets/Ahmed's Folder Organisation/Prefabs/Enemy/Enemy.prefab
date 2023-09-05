@@ -402,7 +402,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemy: {fileID: 1933943763214171596}
-  Health: 3
+  Health: 1
 --- !u!136 &4263229909960914011
 CapsuleCollider:
   m_ObjectHideFlags: 0

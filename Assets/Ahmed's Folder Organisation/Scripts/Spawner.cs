@@ -86,6 +86,10 @@ public class Spawner : MonoBehaviour
             StartSpawn();
         }
     }
+    private void Start()
+    {
+        UIManager.Instance.UpdateEnemyNumber(totalEnemies);
+    }
     public void StartSpawn()
     {
         if (waveSystem && waves >= currentWave)
@@ -150,9 +154,10 @@ public class Spawner : MonoBehaviour
     public void EnemyDied()
     {
         totalEnemies--;
-        if(totalEnemies <= 0)
+        UIManager.Instance.UpdateEnemyNumber(totalEnemies);
+        if (totalEnemies <= 0)
         {
-            PlayerController.instance.PlayerDieWin(true);
+            WaveSystem.instance.NextWave();
         }
     }
 }

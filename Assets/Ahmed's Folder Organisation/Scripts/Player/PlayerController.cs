@@ -1,3 +1,4 @@
+using Cinemachine;
 using DG.Tweening;
 using Lean.Touch;
 using System.Collections;
@@ -20,6 +21,7 @@ public class PlayerController : MonoBehaviour
     private GameObject Bullet;
     [SerializeField]
     private Transform bulletFrom;
+    [SerializeField]
     private Transform bulletTo;
     [SerializeField]
     private float bulletDelay;
@@ -27,10 +29,32 @@ public class PlayerController : MonoBehaviour
     private float bulletSpeed;
     RaycastHit hit;
     GameObject NewBullet;
+    [SerializeField]
+    private float magFillTimer;
+    [SerializeField]
+    private DOTweenAnimation CameraShake;
+    public int Mag;
+    [HideInInspector] public int mageStorage;
+    private bool canShoot = true;
+    private bool running = false;
+
+    [SerializeField] GameObject TouchCOntrols;
+
+    [SerializeField] private ParticleSystem muzzleFlash;
+    [SerializeField] private ParticleSystem _hitParticle;
 
     private void Awake()
     {
         instance = this;
+
+        mageStorage = Mag;
+
+    }
+
+    private void Start()
+    {
+
+        UIManager.Instance.UpdateMagNumber(Mag);
     }
 
     private void Update()
@@ -70,8 +94,70 @@ public class PlayerController : MonoBehaviour
             yield return new WaitForSeconds(bulletDelay);
         }
     }
+    public void ShootHere(bool _shoot)
+    {
+        if (_shoot && canShoot && Mag > 0)
+        {
+            canShoot = false;
+            StopAllCoroutines();
+            running = false;
+            StartCoroutine(_Shoot());
+        }
+        else if(!_shoot && Mag < mageStorage)
+        {
+            FillMage();
+        }
+    }
+    private IEnumerator _Shoot()
+    {
+        yield return new WaitForSeconds(0.2f);
+
+        float _speed;
+        _speed = Vector3.Distance(bulletFrom.position, bulletTo.position) / bulletSpeed;
+
+        Handheld.Vibrate();
+
+        Mag--;
+        UIManager.Instance.UpdateMagNumber(Mag);
+        Instantiate(muzzleFlash, bulletFrom.position, Quaternion.identity);
+        NewBullet = Instantiate(Bullet, bulletFrom.position, Quaternion.identity);
+
+        NewBullet.GetComponent<Bullet>()._hitParticle = _hitParticle;
+        NewBullet.GetComponent<Bullet>().Shooted(bulletTo.position, _speed);
+        CameraShake.RecreateTweenAndPlay();
+
+        yield return new WaitForSeconds(bulletDelay);
+        canShoot = true;
+
+    }
+    void FillMage()
+    {
+        StartCoroutine(FilMag());
+    }
+    IEnumerator FilMag()
+    {
+        yield return new WaitForSeconds(magFillTimer);
+        if (canShoot && !running)
+        {
+            running = true;
+            for (; Mag < mageStorage;)
+            {
+                yield return new WaitForSeconds(magFillTimer);
+                Debug.Log("Run");
+                AudioManager.instance._MagFill();
+                Mag++;
+
+                UIManager.Instance.UpdateMagNumber(Mag);
+            }
+            running = false;
+        }
+    }
     public void PlayerDieWin(bool won)
     {
+        StopAllCoroutines();
+
+        TouchCOntrols.SetActive(false);
+
         if (won)
         {
             anim.SetTrigger("Won");
@@ -87,7 +173,7 @@ public class PlayerController : MonoBehaviour
     }
     IEnumerator NiceDie()
     {
-        StopCoroutine(Shoot());
+        StopCoroutine(_Shoot());
         target.gameObject.SetActive(false);
         GetComponent<PlayerController>().enabled = false;
         GetComponent<LeanFingerDown>().enabled = false;

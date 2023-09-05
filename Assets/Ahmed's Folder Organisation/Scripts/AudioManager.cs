@@ -9,6 +9,7 @@ public class AudioManager : MonoBehaviour
     private AudioSource m_AudioSource;
     [SerializeField] private AudioClip Win;
     [SerializeField] private AudioClip Lose;
+    [SerializeField] private AudioClip FillingMag;
 
     private void Awake()
     {
@@ -26,6 +27,11 @@ public class AudioManager : MonoBehaviour
     public void _Lose()
     {
         m_AudioSource.clip = Lose;
+        m_AudioSource.Play();
+    }
+    public void _MagFill()
+    {
+        m_AudioSource.clip = FillingMag;
         m_AudioSource.Play();
     }
 }

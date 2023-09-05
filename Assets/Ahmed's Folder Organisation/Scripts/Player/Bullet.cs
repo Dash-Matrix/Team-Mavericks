@@ -5,24 +5,17 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    [SerializeField] private ParticleSystem _particleEffect;
+    [HideInInspector] public ParticleSystem _hitParticle;
+    [SerializeField] private GameObject _explosion;
 
     public void Shooted(Vector3 TargetPos, float Speed )
     {
-        Instantiate(_particleEffect, transform.position, Quaternion.identity);
-        transform.DOMove(TargetPos, Speed).SetEase(Ease.Linear).OnComplete(() => Destroy(gameObject));
+        transform.DOMove(TargetPos, Speed).SetEase(Ease.Linear).OnComplete(() => FinishUp());
     }
-    private void OnCollisionEnter(Collision other)
+    void FinishUp()
     {
-        Debug.Log("Collider Hat");
-        if(other.gameObject.tag == "Ground" || other.gameObject.tag == "BG")
-        {
-            Destroy(gameObject);
-        }
-        if (other.gameObject.tag == "Enemy")
-        {
-            other.gameObject.GetComponent<Movement>().Hit();
-            Destroy(gameObject);
-        }
+        Instantiate(_explosion, transform.position, Quaternion.identity);
+        Instantiate(_hitParticle, transform.position, Quaternion.identity);;
+        Destroy(gameObject);
     }
 }
